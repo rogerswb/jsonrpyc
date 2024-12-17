@@ -332,6 +332,10 @@ class RPC(object):
 
         The output stream, re-opened with ``"wb"``.
 
+    .. py:attribute:: encoding
+
+        Character encoding to be used when generating and parsing JSON.
+
     .. py:attribute:: watch
 
         The :py:class:`Watchdog` instance that optionally watches *stdin* and dispatches incoming
@@ -345,6 +349,7 @@ class RPC(object):
         target: Any | None = None,
         stdin: InputStream | None = None,
         stdout: OutputStream | None = None,
+        encoding: str = 'utf-8',
         *,
         watch: bool = True,
         watch_kwargs: dict[str, Any] | None = None,
@@ -365,6 +370,9 @@ class RPC(object):
             stdout = sys.stdout
         self.original_stdout = stdout
         self.stdout = io.open(stdout.fileno(), "wb")
+
+        # set the requested encoding
+        self.encoding = encoding
 
         # other attributes
         self._i = -1
@@ -598,7 +606,7 @@ class RPC(object):
         :param s: The string to write.
         :return: None.
         """
-        self.stdout.write(bytearray(f"{s}\n", "utf-8"))
+        self.stdout.write(bytearray(f"{s}\n", self.encoding))
         self.stdout.flush()
 
 
@@ -713,7 +721,7 @@ class Watchdog(threading.Thread):
             # handle new lines if any
             if lines:
                 for b_line in lines:
-                    line = b_line.decode("utf-8").strip()
+                    line = b_line.decode(self.rpc.encoding).strip()
                     if line:
                         self.rpc._handle(line)
             else:
