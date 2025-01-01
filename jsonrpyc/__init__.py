@@ -504,11 +504,26 @@ class RPC(object):
         """
         try:
             method = self._route(req["method"])
-            result = method(*req["params"]["args"], **req["params"]["kwargs"])
+
+            if "params" in req:
+                paramstype = type(req["params"])
+                if paramstype == dict:
+                    result = method(**req["params"])
+                elif paramstype == list or paramstype == tuple:
+                    if len(req["params"]) > 0:
+                        result = method(*req["params"])
+                    else:
+                        result = method()
+                else:
+                    result = method(req["params"])
+            else:
+                result = method()
+
             if "id" in req:
                 res = Spec.response(req["id"], result)
                 self._write(res)
         except Exception as e:
+            full_traceback(sys.stderr)
             if "id" in req:
                 if isinstance(e, RPCError):
                     err = Spec.error(req["id"], e.code, data=e.data)
